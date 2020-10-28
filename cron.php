@@ -58,8 +58,15 @@ require_once JPATH_BASE . '/includes/framework.php';
  			echo "CRON TASK START
 <br/>";
 
-			@ob_flush();
-			flush();
+//echo 'LOL';
+
+			//@ob_flush();
+			//flush();
+			//$mainframe = JFactory::getApplication('site');
+			//die;
+
+			//@ob_flush();
+			//flush();
 		
 			if(isset($_GET['function']))
 				$function=preg_replace("/[^A-Za-z0-9 ]/", '', $_GET['function']);//JFactory Application not defined yet

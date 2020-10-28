@@ -13,22 +13,24 @@ define('WEBSITE_PATH','https://cda.com.pa/shop/');
 
 function cron_sendemail()
 {
-
 	echo '
-Sending email to customers:
+Sending email to customers:<br/>
 ';
-
-	$message_text=getEmailText();
-	if($message_text=='')
+	$table=getCustomTable();
+	
+	if($table==null)
 	{
 		echo '
-Email text not found: please check Custom Tables/Tables/Promotion Emails (Description)
+Email text not found: please check Custom Tables/Tables/Promotion Emails (Description)<br/>
 ';
 		return false;
 	}
 	
-		
-	$users=getUsersWithEmailNotSent(10);
+	
+	$subject=$table['tabletitle'];
+	$message_text=$table['description'];
+	
+	$users=getUsersWithEmailNotSent(1);
 	foreach($users as $user)
 	{
 		$email=$user['email'];
@@ -39,8 +41,7 @@ Email text not found: please check Custom Tables/Tables/Promotion Emails (Descri
 		$message_text=str_replace('{Name}',$client_name,$message_text);
 		
 		$last_orders=getLastOrdersByEmail($email);
-		//$last_orders=getLastOrdersByUserID($user['id']);
-		
+
 		if(count($last_orders)>0)
 		{
 			$order=$last_orders[0];
@@ -69,7 +70,7 @@ Email text not found: please check Custom Tables/Tables/Promotion Emails (Descri
 				$message_text=str_replace('{Products}',implode('',$texts),$message_text);
 			}
 
-			echo $message_text;
+			sendEmail($email,$subject,$message_text);
 		}
 		saveEmailSentLog($user['id'],$email,$client_name);
 	}
@@ -90,18 +91,18 @@ function renderProductDetails($product_details,$size,$style='')
 	return $product_text;
 }
 
-function getEmailText()
+function getCustomTable()
 {
 	$db = JFactory::getDBO();
 
-	$query = 'SELECT description FROM #__customtables_tables WHERE tablename='.$db->quote('promotionemails').' LIMIT 1';
+	$query = 'SELECT tabletitle,description FROM #__customtables_tables WHERE tablename='.$db->quote('promotionemails').' LIMIT 1';
 
 	$db->setQuery($query);
 	$recs=$db->loadAssocList();
 	if(count($recs)==0)
-		return '';
+		return null;
 
-	return $recs[0]['description'];
+	return $recs[0];
 }
 
 function getProductContent($product_id)
@@ -136,19 +137,11 @@ function getUsersWithEmailNotSent($limit)
 	//$wherearr[]='(SELECT id FROM #__customtables_table_promotionemails AS p WHERE p.es_user=u.id LIMIT 1) IS NULL';
 	$wherearr[]='(SELECT id FROM #__customtables_table_promotionemails AS p WHERE p.es_email=o.user_email LIMIT 1) IS NULL';
 	
-	/*
-	$selects=array();
-	$selects[]='u.id AS id';
-	$selects[]='u.name AS client_name';
-	$selects[]='u.email AS email';
-	$query = 'SELECT '.implode(',', $selects).' FROM #__users AS u WHERE '.implode(" AND ",$wherearr).' ORDER BY id DESC LIMIT '.$limit;
-	*/
-	
 	$selects=array();
 	
 	$selects[]='o.user_id AS id';
 	$selects[]='o.j2store_order_id AS order_id';
-	$selects[]='(SELECT CONCAT(COALESCE(`billing_last_name`,"")," ",COALESCE(`billing_first_name`,"")," ",COALESCE(`billing_middle_name`,"")) FROM #__j2store_orderinfos AS oi WHERE oi.order_id=o.order_id) AS client_name';
+	$selects[]='(SELECT CONCAT(COALESCE(`billing_last_name`,"")," ",COALESCE(`billing_first_name`,"")," ",COALESCE(`billing_middle_name`,"")) FROM #__j2store_orderinfos AS oi WHERE oi.order_id=o.order_id LIMIT 1) AS client_name';
 	$selects[]='o.user_email AS email';
 	$query = 'SELECT '.implode(',', $selects).' FROM #__j2store_orders AS o WHERE '.implode(" AND ",$wherearr).' ORDER BY j2store_order_id DESC LIMIT '.$limit;
 	
@@ -157,30 +150,6 @@ function getUsersWithEmailNotSent($limit)
 
 	return $db->loadAssocList();
 }
-
-/*
-function getLastOrdersByUserID($userid)
-{
-	$db = JFactory::getDBO();
-	$wherearr=array();
-	
-	$wherearr[]='o.user_id='.(int)$userid;
-	
-	$selects=array();
-
-	$selects[]='product_id';
-	$selects[]='orderitem_name';
-	
-	$inner=' INNER JOIN #__j2store_orders AS o ON o.order_id=oi.order_id';
-
-	$query = 'SELECT '.implode(',', $selects).' FROM #__j2store_orderitems AS oi '.$inner.' WHERE '.implode(" AND ",$wherearr);;
-	$query.=' ORDER BY oi.created_on DESC LIMIT 1';//Last 1 order
-
-	$db->setQuery($query);
-
-	return $db->loadAssocList();
-}
-*/
 
 function getLastOrdersByEmail($email)
 {
@@ -248,17 +217,22 @@ function saveEmailSentLog($userid,$email,$client_name)
 }
 
 
-function sendEmail($email,$subject,$body,$files)
+function sendEmail($email,$subject,$body)
 {
 	
-	$mainframe = JFactory::getApplication('site');
-	$MailFrom 	= $mainframe->getCfg('mailfrom');
-	$FromName 	= $mainframe->getCfg('fromname');
-		
-	$email='ivankomlev@gmail.com';
+	$config = JFactory::getConfig();
+	
+	$MailFrom 	= $config->get( 'mailfrom' );
+	$FromName 	= $config->get( 'fromname' );
+	
+	$email='markodearco@gmail.com';
+
+
+		echo '
+--Sending email to '.$email.'<br/>
+';
 
 	$mail = JFactory::getMailer();
-
 	
 	$mail->IsHTML(true);
 	$mail->addRecipient($email);
@@ -266,8 +240,7 @@ function sendEmail($email,$subject,$body,$files)
 	$mail->setSubject($subject);
 	
 
-	$mail->setBody($bidy);
+	$mail->setBody($body);
 
 	$sent = $mail->Send();
-	
 }
