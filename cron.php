@@ -6,6 +6,7 @@
  * @GNU General Public License
  **/
 
+//This file looks for other PHP files and executes them, file must contain a function called "cron_FILENAME", FILENAME without ".php"
 
 // Initialize Joomla framework
 const _JEXEC = 1;

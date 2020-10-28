@@ -35,7 +35,8 @@ Email text not found: please check Custom Tables/Tables/Promotion Emails (Descri
 	
 		$message_text=str_replace('{Name}',$user['client_name'],$message_text);
 		
-		$last_orders=getLastOrdersByUsreID($user['id']);
+		$last_orders=getLastOrdersByEmail($email);
+		//$last_orders=getLastOrdersByUserID($user['id']);
 		
 		if(count($last_orders)>0)
 		{
@@ -46,7 +47,7 @@ Email text not found: please check Custom Tables/Tables/Promotion Emails (Descri
 			$product_details=getProductContent($order['product_id']);
 			if($product_details!==null)
 			{
-				$message_text=str_replace('{LastPurchasedProduct}',renderProductDetails($product_details),$message_text);
+				$message_text=str_replace('{LastPurchasedProduct}',renderProductDetails($product_details,665),$message_text);
 				
 				$ignore_product=$order['product_id'];
 				
@@ -57,7 +58,7 @@ Email text not found: please check Custom Tables/Tables/Promotion Emails (Descri
 				{
 					$product_details=getProductContent($order['product_id']);
 					if($product_details!==null)
-						$texts[]=renderProductDetails($product_details);
+						$texts[]=renderProductDetails($product_details,300,'display:inline-block;');
 					
 				}
 				
@@ -66,17 +67,18 @@ Email text not found: please check Custom Tables/Tables/Promotion Emails (Descri
 
 			echo $message_text;
 		}
+		saveEmailSentLog($email, $user['id']);
 	}
 }
-function renderProductDetails($product_details)
+function renderProductDetails($product_details,$size,$style='')
 {
 	if($product_details==null)
 		return '';
 	
 	$link=WEBSITE_PATH.'es/'.$product_details['alias'];
-	$product_text='<a href="'.$link.'" target="_blank"><div style="position:relative;width:300px;height:230px;overflow:hidden;display:inline-block;margin:15px;border:3px solid #00a3b3;border-radius:10px;padding:15px;text-align:center;">'
+	$product_text='<a href="'.$link.'" target="_blank"><div style="'.$style.';position:relative;width:'.$size.'px;height:'.($size-70).'px;overflow:hidden;margin:15px;border:3px solid #00a3b3;border-radius:10px;padding:15px;text-align:center;">'
 		
-		.'<img src="'.WEBSITE_PATH.$product_details['image'].'" style="height:200px;" />'
+		.'<img src="'.WEBSITE_PATH.$product_details['image'].'" style="height:'.($size-100).'px;" />'
 		.'<div style="position:absolute;width:100%;bottom:0;left:0;text-align:center;"><h3 style="color:#00a3b3;">'.$product_details['title'].'</h3></div>'
 		.'</div></a>';
 				
@@ -140,7 +142,8 @@ function getUsersWithEmailNotSent($limit)
 	return $db->loadAssocList();
 }
 
-function getLastOrdersByUsreID($userid)
+/*
+function getLastOrdersByUserID($userid)
 {
 	$db = JFactory::getDBO();
 	$wherearr=array();
@@ -161,7 +164,29 @@ function getLastOrdersByUsreID($userid)
 
 	return $db->loadAssocList();
 }
+*/
 
+function getLastOrdersByEmail($email)
+{
+	$db = JFactory::getDBO();
+	$wherearr=array();
+	
+	$wherearr[]='o.user_email='.$db->quote($email);
+	
+	$selects=array();
+
+	$selects[]='product_id';
+	$selects[]='orderitem_name';
+	
+	$inner=' INNER JOIN #__j2store_orders AS o ON o.order_id=oi.order_id';
+
+	$query = 'SELECT '.implode(',', $selects).' FROM #__j2store_orderitems AS oi '.$inner.' WHERE '.implode(" AND ",$wherearr);;
+	$query.=' ORDER BY oi.created_on DESC LIMIT 1';//Last 1 order
+
+	$db->setQuery($query);
+
+	return $db->loadAssocList();
+}
 
 
 
@@ -187,11 +212,28 @@ function getMostPopularProducts($how_many_products,$ignore_product)
 	return $db->loadAssocList();
 }
 
+function saveEmailSentLog($email,$userid=0)
+{
+	echo 'Save log
+';
+	$db = JFactory::getDBO();
+	
+	$sets=array();
+	$sets[]='es_user='.$userid;
+	$sets[]='es_email='.$db->quote($email);
+	$sets[]='es_datetime=NOW()';
+	
+	$query='INSERT INTO #__customtables_table_promotionemails SET '.implode(', ',$sets);
+	$db->setQuery( $query );
+	$db->execute();
 
+
+}
 
 
 function sendEmail($email,$subject,$body,$files)
 {
+	
 	$mainframe = JFactory::getApplication('site');
 	$MailFrom 	= $mainframe->getCfg('mailfrom');
 	$FromName 	= $mainframe->getCfg('fromname');
@@ -210,4 +252,5 @@ function sendEmail($email,$subject,$body,$files)
 	$mail->setBody($bidy);
 
 	$sent = $mail->Send();
+	
 }
