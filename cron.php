@@ -6,6 +6,11 @@
  * @GNU General Public License
  **/
 
+///usr/local/php73 -q /public_html/shop/cron/cron.php
+///usr/bin/php -q /public_html/shop/cron/cron.php
+
+
+
 //This file looks for other PHP files and executes them, file must contain a function called "cron_FILENAME", FILENAME without ".php"
 
 // Initialize Joomla framework
@@ -54,9 +59,18 @@ require_once JPATH_BASE . '/includes/framework.php';
  * Cron job 
  *
  */
+ 
 
- 			echo "CRON TASK START
-<br/>";
+ 			echo '
+<!DOCTYPE html>
+<html lang="es-es" dir="ltr">
+<head>
+</head>
+<body style="background-color:black;color:green;">
+<!-- Top Navigation -->			
+			
+CRON TASK START
+<br/>';
 
 //echo 'LOL';
 
@@ -109,4 +123,8 @@ Running task: "'.$functionname.'"<br/>
 			}
 			
 			echo "CRON TASK END
-<br/>";
+<br/>
+</body>
+</html>
+
+";

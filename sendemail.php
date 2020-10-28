@@ -10,6 +10,9 @@
 defined( '_JEXEC' ) or die( 'Restricted access' );
 
 define('WEBSITE_PATH','https://cda.com.pa/shop/');
+define('IMAGE_WIDTH',565);
+define('FONT_SIZE',22);
+
 
 function cron_sendemail()
 {
@@ -52,7 +55,7 @@ Email text not found: please check Custom Tables/Tables/Promotion Emails (Descri
 			$product_details=getProductContent($order['product_id']);
 			if($product_details!==null)
 			{
-				$message_text=str_replace('{LastPurchasedProduct}',renderProductDetails($product_details,665),$message_text);
+				$message_text=str_replace('{LastPurchasedProduct}',renderProductDetails($product_details,IMAGE_WIDTH),$message_text);
 				
 				$ignore_product=$order['product_id'];
 				
@@ -63,13 +66,14 @@ Email text not found: please check Custom Tables/Tables/Promotion Emails (Descri
 				{
 					$product_details=getProductContent($order['product_id']);
 					if($product_details!==null)
-						$texts[]=renderProductDetails($product_details,300,'display:inline-block;');
+						$texts[]=renderProductDetails($product_details,(floor(IMAGE_WIDTH/2)-30-3),'display:inline-block;');
 					
 				}
 				
 				$message_text=str_replace('{Products}',implode('',$texts),$message_text);
 			}
 
+			//echo $message_text;
 			sendEmail($email,$subject,$message_text);
 		}
 		saveEmailSentLog($user['id'],$email,$client_name);
@@ -81,10 +85,10 @@ function renderProductDetails($product_details,$size,$style='')
 		return '';
 	
 	$link=WEBSITE_PATH.'es/'.$product_details['alias'];
-	$product_text='<a href="'.$link.'" target="_blank"><div style="'.$style.';position:relative;width:'.$size.'px;height:'.($size-70).'px;overflow:hidden;margin:15px;border:3px solid #00a3b3;border-radius:10px;padding:15px;text-align:center;">'
+	$product_text='<a href="'.$link.'" target="_blank"><div style="'.$style.';background-color:white;position:relative;width:'.$size.'px;height:'.($size-70).'px;overflow:hidden;margin:15px;border:3px solid #00a3b3;border-radius:10px;padding:15px;text-align:center;">'
 		
 		.'<img src="'.WEBSITE_PATH.$product_details['image'].'" style="height:'.($size-100).'px;" />'
-		.'<div style="position:absolute;width:100%;bottom:0;left:0;text-align:center;"><h3 style="color:#00a3b3;">'.$product_details['title'].'</h3></div>'
+		.'<div style="position:absolute;width:100%;bottom:0;left:0;text-align:center;"><h3 style="color:#00a3b3;font-seze:'.FONT_SIZE.'px;">'.$product_details['title'].'</h3></div>'
 		.'</div></a>';
 				
 	
@@ -225,7 +229,8 @@ function sendEmail($email,$subject,$body)
 	$MailFrom 	= $config->get( 'mailfrom' );
 	$FromName 	= $config->get( 'fromname' );
 	
-	$email='markodearco@gmail.com';
+	//$email='markodearco@gmail.com';
+	$email='ivankomlev@gmail.com';
 
 
 		echo '
