@@ -28,12 +28,15 @@ Email text not found: please check Custom Tables/Tables/Promotion Emails (Descri
 	}
 	
 		
-	$users=getUsersWithEmailNotSent(1);
+	$users=getUsersWithEmailNotSent(10);
 	foreach($users as $user)
 	{
 		$email=$user['email'];
-	
-		$message_text=str_replace('{Name}',$user['client_name'],$message_text);
+		
+		$client_name=trim($user['client_name']);
+		$client_name=mb_convert_case($client_name, MB_CASE_TITLE, "UTF-8");
+		
+		$message_text=str_replace('{Name}',$client_name,$message_text);
 		
 		$last_orders=getLastOrdersByEmail($email);
 		//$last_orders=getLastOrdersByUserID($user['id']);
@@ -41,6 +44,7 @@ Email text not found: please check Custom Tables/Tables/Promotion Emails (Descri
 		if(count($last_orders)>0)
 		{
 			$order=$last_orders[0];
+			
 			
 			$message_text=str_replace('{Product Name}',$order['orderitem_name'],$message_text);
 			
@@ -67,7 +71,7 @@ Email text not found: please check Custom Tables/Tables/Promotion Emails (Descri
 
 			echo $message_text;
 		}
-		saveEmailSentLog($email, $user['id']);
+		saveEmailSentLog($user['id'],$email,$client_name);
 	}
 }
 function renderProductDetails($product_details,$size,$style='')
@@ -129,13 +133,25 @@ function getUsersWithEmailNotSent($limit)
 		
 	$db = JFactory::getDBO();
 	$wherearr=array();
-	$wherearr[]='(SELECT id FROM #__customtables_table_promotionemails AS p WHERE p.es_user=u.id LIMIT 1) IS NULL';
+	//$wherearr[]='(SELECT id FROM #__customtables_table_promotionemails AS p WHERE p.es_user=u.id LIMIT 1) IS NULL';
+	$wherearr[]='(SELECT id FROM #__customtables_table_promotionemails AS p WHERE p.es_email=o.user_email LIMIT 1) IS NULL';
 	
+	/*
 	$selects=array();
 	$selects[]='u.id AS id';
 	$selects[]='u.name AS client_name';
 	$selects[]='u.email AS email';
 	$query = 'SELECT '.implode(',', $selects).' FROM #__users AS u WHERE '.implode(" AND ",$wherearr).' ORDER BY id DESC LIMIT '.$limit;
+	*/
+	
+	$selects=array();
+	
+	$selects[]='o.user_id AS id';
+	$selects[]='o.j2store_order_id AS order_id';
+	$selects[]='(SELECT CONCAT(COALESCE(`billing_last_name`,"")," ",COALESCE(`billing_first_name`,"")," ",COALESCE(`billing_middle_name`,"")) FROM #__j2store_orderinfos AS oi WHERE oi.order_id=o.order_id) AS client_name';
+	$selects[]='o.user_email AS email';
+	$query = 'SELECT '.implode(',', $selects).' FROM #__j2store_orders AS o WHERE '.implode(" AND ",$wherearr).' ORDER BY j2store_order_id DESC LIMIT '.$limit;
+	
 	
 	$db->setQuery($query);
 
@@ -212,7 +228,7 @@ function getMostPopularProducts($how_many_products,$ignore_product)
 	return $db->loadAssocList();
 }
 
-function saveEmailSentLog($email,$userid=0)
+function saveEmailSentLog($userid,$email,$client_name)
 {
 	echo 'Save log
 ';
@@ -220,6 +236,7 @@ function saveEmailSentLog($email,$userid=0)
 	
 	$sets=array();
 	$sets[]='es_user='.$userid;
+	$sets[]='es_name='.$db->quote($client_name);
 	$sets[]='es_email='.$db->quote($email);
 	$sets[]='es_datetime=NOW()';
 	
