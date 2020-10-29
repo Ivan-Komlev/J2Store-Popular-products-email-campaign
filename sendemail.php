@@ -229,8 +229,8 @@ function sendEmail($email,$subject,$body)
 	$MailFrom 	= $config->get( 'mailfrom' );
 	$FromName 	= $config->get( 'fromname' );
 	
-	//$email='markodearco@gmail.com';
-	$email='ivankomlev@gmail.com';
+	$email='markodearco@gmail.com';
+	//$email='ivankomlev@gmail.com';
 
 
 		echo '
