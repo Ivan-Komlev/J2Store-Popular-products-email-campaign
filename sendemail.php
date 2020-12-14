@@ -16,6 +16,8 @@ define('FONT_SIZE',22);
 
 function cron_sendemail()
 {
+	require_once(JPATH_SITE.DIRECTORY_SEPARATOR.'administrator'.DIRECTORY_SEPARATOR.'components'.DIRECTORY_SEPARATOR.'com_customtables'.DIRECTORY_SEPARATOR.'libraries'.DIRECTORY_SEPARATOR.'misc.php');
+	
 	echo '
 Sending email to customers:<br/>
 ';
@@ -41,7 +43,11 @@ Email text not found: please check Custom Tables/Tables/Promotion Emails (Descri
 		$client_name=trim($user['client_name']);
 		$client_name=mb_convert_case($client_name, MB_CASE_TITLE, "UTF-8");
 		
+		$client_firstname=trim($user['client_firstname']);
+		$client_firstname=mb_convert_case($client_firstname, MB_CASE_TITLE, "UTF-8");
+		
 		$message_text=str_replace('{Name}',$client_name,$message_text);
+		$message_text=str_replace('{FirstName}',$client_firstname,$message_text);
 		
 		$last_orders=getLastOrdersByEmail($email);
 
@@ -55,22 +61,54 @@ Email text not found: please check Custom Tables/Tables/Promotion Emails (Descri
 			$product_details=getProductContent($order['product_id']);
 			if($product_details!==null)
 			{
-				$message_text=str_replace('{LastPurchasedProduct}',renderProductDetails($product_details,IMAGE_WIDTH),$message_text);
-				
-				$ignore_product=$order['product_id'];
-				
-				$texts=array();
-				$PopularProducts=getMostPopularProducts(2,$ignore_product);
-
-				foreach($PopularProducts as $order)
+				//Last product
+				$options=array();
+				$fList=JoomlaBasicMisc::getListToReplace('LastPurchasedProduct',$options,$message_text,'{}');
+				$i=0;
+				foreach($fList as $fItem)
 				{
-					$product_details=getProductContent($order['product_id']);
-					if($product_details!==null)
-						$texts[]=renderProductDetails($product_details,(floor(IMAGE_WIDTH/2)-30-3),'display:inline-block;');
-					
+					$paramslist=JoomlaBasicMisc::csv_explode(',', $options[$i],'"', false);
+					$ButtonLabel=$paramslist[0];
+					$ButtonClass='';
+					if(isset($paramslist[1]))
+						$ButtonClass=$paramslist[1];
+
+					$text=renderProductDetails($product_details,IMAGE_WIDTH,'display:inline-block;',$ButtonLabel,$ButtonClass);
+					$message_text=str_replace($fItem,$text,$message_text);
+					$i++;
 				}
 				
-				$message_text=str_replace('{Products}',implode('',$texts),$message_text);
+				//Many products
+				$ignore_product=$order['product_id'];
+				
+				$options=array();
+				$fList=JoomlaBasicMisc::getListToReplace('Products',$options,$message_text,'{}');
+
+				$PopularProducts=getMostPopularProducts(2,$ignore_product);
+
+				$i=0;
+				foreach($fList as $fItem)
+				{
+					$paramslist=JoomlaBasicMisc::csv_explode(',', $options[$i],'"', false);
+					$ButtonLabel=$paramslist[0];
+					$ButtonClass='';
+					if(isset($paramslist[1]))
+						$ButtonClass=$paramslist[1];
+				
+					//Get Productds
+					$texts=array();
+					
+					foreach($PopularProducts as $order)
+					{
+						$product_details=getProductContent($order['product_id']);
+						if($product_details!==null)
+							$texts[]=renderProductDetails($product_details,(floor(IMAGE_WIDTH/2)-30-3),'display:inline-block;',$ButtonLabel,$ButtonClass);
+					}
+					
+					$message_text=str_replace($fItem,implode('',$texts),$message_text);
+					$i++;
+				}
+			
 			}
 
 			//echo $message_text;
@@ -79,18 +117,21 @@ Email text not found: please check Custom Tables/Tables/Promotion Emails (Descri
 		saveEmailSentLog($user['id'],$email,$client_name);
 	}
 }
-function renderProductDetails($product_details,$size,$style='')
+function renderProductDetails($product_details,$size,$style='',$ButtonLabel,$ButtonClass)
 {
 	if($product_details==null)
 		return '';
 	
 	$link=WEBSITE_PATH.'es/'.$product_details['alias'];
-	$product_text='<a href="'.$link.'" target="_blank"><div style="'.$style.';background-color:white;position:relative;width:'.$size.'px;height:'.($size-70).'px;overflow:hidden;margin:15px;border:3px solid #00a3b3;border-radius:10px;padding:15px;text-align:center;">'
+	$product_text='<a href="'.$link.'" target="_blank"><div style="'.($style!='' ? $style.';' : '').'background-color:white;position:relative;width:'.$size.'px;height:'.($size-70).'px;overflow:hidden;margin:15px;border:3px solid #00a3b3;border-radius:10px;padding:15px;text-align:center;">'
 		
 		.'<img src="'.WEBSITE_PATH.$product_details['image'].'" style="height:'.($size-100).'px;" />'
-		.'<div style="position:absolute;width:100%;bottom:0;left:0;text-align:center;"><h3 style="color:#00a3b3;font-seze:'.FONT_SIZE.'px;">'.$product_details['title'].'</h3></div>'
+		.'<div style="position:absolute;width:100%;bottom:30px;left:0;text-align:center;"><h3 style="color:#00a3b3;font-seze:'.FONT_SIZE.'px;">'.$product_details['title'].'</h3></div>'
+		
+		.($ButtonLabel!='' ? '<button'.($ButtonClass!='' ? ' style="'.$ButtonClass.'"' : '').'>'.$ButtonLabel.'</button>' : '')
+		
 		.'</div></a>';
-				
+	
 	
 	return $product_text;
 }
@@ -146,6 +187,7 @@ function getUsersWithEmailNotSent($limit)
 	$selects[]='o.user_id AS id';
 	$selects[]='o.j2store_order_id AS order_id';
 	$selects[]='(SELECT CONCAT(COALESCE(`billing_last_name`,"")," ",COALESCE(`billing_first_name`,"")," ",COALESCE(`billing_middle_name`,"")) FROM #__j2store_orderinfos AS oi WHERE oi.order_id=o.order_id LIMIT 1) AS client_name';
+	$selects[]='(SELECT COALESCE(`billing_first_name`,"") FROM #__j2store_orderinfos AS oi WHERE oi.order_id=o.order_id LIMIT 1) AS client_firstname';
 	$selects[]='o.user_email AS email';
 	$query = 'SELECT '.implode(',', $selects).' FROM #__j2store_orders AS o WHERE '.implode(" AND ",$wherearr).' ORDER BY j2store_order_id DESC LIMIT '.$limit;
 	
