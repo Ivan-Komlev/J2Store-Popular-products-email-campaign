@@ -121,16 +121,16 @@ function renderProductDetails($product_details,$size,$style='',$ButtonLabel,$But
 {
 	if($product_details==null)
 		return '';
-	
+	//border:3px solid #00a3b3;border-radius:10px;
 	$link=WEBSITE_PATH.'es/'.$product_details['alias'];
-	$product_text='<a href="'.$link.'" target="_blank"><div style="'.($style!='' ? $style.';' : '').'background-color:white;position:relative;width:'.$size.'px;height:'.($size-70).'px;overflow:hidden;margin:15px;border:3px solid #00a3b3;border-radius:10px;padding:15px;text-align:center;">'
+	$product_text='<a href="'.$link.'" target="_blank"><div style="'.($style!='' ? $style.';' : '').'background-color:white;position:relative;width:'.$size.'px;height:'.($size-0).'px;overflow:hidden;margin:15px;padding:15px;text-align:center;">'
 		
 		.'<img src="'.WEBSITE_PATH.$product_details['image'].'" style="height:'.($size-100).'px;" />'
-		.'<div style="position:absolute;width:100%;bottom:30px;left:0;text-align:center;"><h3 style="color:#00a3b3;font-seze:'.FONT_SIZE.'px;">'.$product_details['title'].'</h3></div>'
+		.'<div style="position:absolute;width:100%;bottom:30px;left:0;text-align:center;"><h3 style="color:#00a3b3;font-seze:'.FONT_SIZE.'px;">'.$product_details['title'].'</h3>'
 		
 		.($ButtonLabel!='' ? '<button'.($ButtonClass!='' ? ' style="'.$ButtonClass.'"' : '').'>'.$ButtonLabel.'</button>' : '')
 		
-		.'</div></a>';
+		.'</div></div></a>';
 	
 	
 	return $product_text;
